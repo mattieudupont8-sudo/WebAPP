@@ -7,6 +7,7 @@ const GEN_RANGES = [
 ];
 
 const STORAGE_KEY = 'site-shiny-v3';
+const FR_NAMES_STORAGE_KEY = 'site-shiny-fr-names-v1';
 const LEGACY_SPLIT_GAMES = {
   'HeartGold / SoulSilver': ['HeartGold', 'SoulSilver'],
   'HeartGold/SoulSilver': ['HeartGold', 'SoulSilver'],
@@ -30,6 +31,7 @@ let selectedPokemon = null;
 let dialogMode = 'hunt';
 let editingHunt = null;
 const shinyCardColorCache = {};
+const dexSpriteChoiceCache = {};
 
 // Couleurs stables inspirées des sprites shiny.
 // La Gen 1 est fixée à la main pour éviter les erreurs de navigateur/cache.
@@ -76,28 +78,56 @@ const SHINY_COLOR_MAP = {
 };
 
 const SHINY_COLOR_OVERRIDE_MAP = {
-  197:'88, 188, 235', 208:'205, 180, 95', 229:'160, 118, 210', 248:'145, 104, 210',
-  249:'236, 188, 82', 250:'210, 110, 78', 249:'236,188,82',
-  250:'210,110,78', 251:'110, 220, 150',
-  303:'236, 190, 82', 334:'245, 198, 88', 373:'92, 188, 112', 376:'222, 185, 80',
-  380:'238, 182, 82', 381:'102, 210, 112', 382:'205, 92, 92', 383:'205, 178, 82',
-  384:'236, 198, 86', 385:'255, 218, 110', 386:'206, 120, 88',
-  389:'152, 188, 96', 390:'238, 138, 188', 391:'232, 112, 168', 392:'224, 98, 156',
-  393:'112, 198, 242', 394:'98, 180, 225', 395:'86, 164, 212',
-  448:'230, 198, 82', 460:'225, 218, 110', 475:'110, 220, 180',
-  483:'232, 178, 110', 484:'205, 112, 188', 487:'188, 206, 92', 491:'188, 92, 205',
-  494:'255, 188, 82', 495:'120, 228, 120', 496:'104, 212, 108', 497:'88, 196, 96',
-  498:'242, 188, 82', 499:'224, 160, 74', 500:'210, 138, 68',
-  501:'112, 205, 242', 502:'96, 186, 224', 503:'82, 166, 208',
-  609:'170, 132, 240', 612:'225, 98, 110', 635:'110, 205, 110', 644:'235, 212, 96', 645:'186, 122, 92', 646:'112, 218, 226',
-  647:'102, 208, 196', 648:'238, 132, 196', 649:'188, 208, 96'
+  // Gen 2 ciblée : évite les cadres verts incohérents
+  152:'176, 218, 104', 153:'168, 205, 98', 154:'155, 194, 92',
+  155:'218, 148, 82', 156:'205, 128, 76', 157:'190, 105, 72',
+  158:'92, 198, 226', 159:'82, 178, 214', 160:'72, 156, 205',
+  161:'210, 162, 94', 162:'188, 138, 82', 163:'190, 142, 212', 164:'170, 126, 195',
+  165:'236, 178, 78', 166:'215, 156, 72', 167:'188, 128, 220', 168:'165, 108, 205',
+  169:'236, 142, 82', 170:'82, 205, 226', 171:'72, 178, 210',
+  172:'245, 188, 72', 173:'152, 225, 225', 174:'108, 218, 126',
+  175:'236, 198, 86', 176:'224, 176, 82', 177:'112, 208, 228', 178:'96, 186, 210',
+  179:'232, 154, 78', 180:'214, 138, 72', 181:'196, 120, 66',
+  182:'226, 176, 90', 183:'126, 220, 232', 184:'104, 198, 220',
+  185:'202, 164, 92', 186:'110, 188, 226', 187:'232, 178, 92', 188:'210, 156, 84', 189:'188, 138, 78',
+  190:'238, 160, 92', 191:'238, 202, 82', 192:'218, 182, 78',
+  193:'86, 172, 238', 194:'206, 130, 226', 195:'184, 112, 205',
+  196:'146, 208, 110', 197:'88, 188, 235', 198:'236, 162, 92', 199:'172, 118, 205',
+  200:'236, 205, 82', 201:'132, 198, 232', 202:'132, 172, 218',
+  203:'238, 170, 86', 204:'205, 160, 90', 205:'178, 138, 82',
+  206:'232, 178, 98', 207:'160, 122, 205', 208:'205, 180, 95',
+  209:'170, 128, 210', 210:'150, 110, 196', 211:'236, 178, 88',
+  212:'118, 210, 122', 213:'236, 190, 82', 214:'190, 126, 226',
+  215:'238, 154, 86', 216:'104, 202, 226', 217:'88, 178, 210',
+  218:'132, 190, 238', 219:'110, 168, 220', 220:'238, 198, 94', 221:'218, 176, 84',
+  222:'126, 208, 228', 223:'190, 130, 220', 224:'170, 112, 205',
+  225:'236, 170, 90', 226:'112, 198, 224', 227:'196, 156, 98',
+  228:'152, 112, 210', 229:'160, 118, 210', 230:'174, 118, 220',
+  231:'236, 178, 92', 232:'210, 150, 82', 233:'116, 204, 232',
+  234:'210, 158, 96', 235:'226, 148, 196', 236:'206, 168, 96', 237:'188, 148, 88',
+  238:'236, 154, 205', 239:'238, 178, 76', 240:'220, 130, 76', 241:'196, 152, 95', 242:'128, 212, 138',
+  243:'232, 190, 74', 244:'220, 122, 78', 245:'116, 198, 230', 246:'178, 142, 214', 247:'158, 126, 198', 248:'145, 104, 210',
+  249:'232, 168, 204', 250:'210, 110, 78', 251:'110, 220, 150',
+  // Gen 3-5 ciblée / légendaires / familles souvent problématiques
+  303:'236, 190, 82', 334:'245, 198, 88', 350:'236, 190, 230', 373:'92, 188, 112', 376:'222, 185, 80',
+  380:'238, 182, 82', 381:'102, 210, 112', 382:'205, 92, 92', 383:'205, 178, 82', 384:'236, 198, 86', 385:'255, 218, 110', 386:'206, 120, 88',
+  389:'152, 188, 96', 390:'238, 138, 188', 391:'232, 112, 168', 392:'224, 98, 156', 393:'112, 198, 242', 394:'98, 180, 225', 395:'86, 164, 212',
+  403:'238, 190, 76', 404:'220, 170, 72', 405:'200, 150, 66', 445:'184, 72, 92', 448:'230, 198, 82', 460:'225, 218, 110', 475:'110, 220, 180',
+  451:'214, 64, 76', 452:'198, 72, 118',
+    483:'232, 178, 110', 484:'205, 112, 188', 487:'184, 188, 198', 491:'188, 92, 205',
+  494:'255, 188, 82', 495:'120, 228, 120', 496:'104, 212, 108', 497:'88, 196, 96', 498:'242, 188, 82', 499:'224, 160, 74', 500:'210, 138, 68',
+  501:'112, 205, 242', 502:'96, 186, 224', 503:'82, 166, 208', 570:'122, 198, 226', 571:'102, 178, 210',
+  582:'184, 164, 236', 583:'170, 150, 226', 584:'154, 132, 214',
+  607:'170, 132, 240', 608:'156, 118, 224', 609:'142, 104, 210', 610:'225, 110, 110', 611:'210, 94, 104', 612:'195, 82, 96',
+  633:'110, 205, 110', 634:'100, 188, 102', 635:'88, 170, 94', 643:'224, 190, 86', 644:'235, 212, 96', 645:'186, 122, 92', 646:'112, 218, 226', 647:'102, 208, 196', 648:'238, 132, 196', 649:'188, 208, 96'
 };
 
 const SHINY_PROCEDURAL_PALETTE = [
-  [114, 225, 118], [245, 202, 74], [118, 205, 242], [238, 150, 196], [236, 128, 78],
-  [176, 146, 235], [102, 210, 165], [210, 182, 98], [226, 112, 156], [110, 198, 92],
-  [132, 190, 236], [236, 170, 108], [204, 130, 224], [152, 225, 112], [242, 214, 104],
-  [106, 214, 214], [220, 126, 106], [188, 170, 235], [116, 220, 142], [230, 188, 122]
+  [245, 202, 74], [118, 205, 242], [238, 150, 196], [236, 128, 78],
+  [176, 146, 235], [210, 182, 98], [226, 112, 156], [132, 190, 236],
+  [236, 170, 108], [204, 130, 224], [242, 214, 104], [106, 214, 214],
+  [220, 126, 106], [188, 170, 235], [230, 188, 122], [154, 188, 232],
+  [235, 160, 110], [198, 142, 220], [112, 198, 230], [220, 178, 96]
 ];
 
 const SHINY_FALLBACK_COLORS = [
@@ -107,6 +137,15 @@ const SHINY_FALLBACK_COLORS = [
 ];
 
 
+const FRENCH_NAME_FALLBACK = {
+  1:'Bulbizarre',2:'Herbizarre',3:'Florizarre',4:'Salamèche',5:'Reptincel',6:'Dracaufeu',7:'Carapuce',8:'Carabaffe',9:'Tortank',10:'Chenipan',11:'Chrysacier',12:'Papilusion',13:'Aspicot',14:'Coconfort',15:'Dardargnan',16:'Roucool',17:'Roucoups',18:'Roucarnage',19:'Rattata',20:'Rattatac',21:'Piafabec',22:'Rapasdepic',23:'Abo',24:'Arbok',25:'Pikachu',26:'Raichu',27:'Sabelette',28:'Sablaireau',29:'Nidoran♀',30:'Nidorina',31:'Nidoqueen',32:'Nidoran♂',33:'Nidorino',34:'Nidoking',35:'Mélofée',36:'Mélodelfe',37:'Goupix',38:'Feunard',39:'Rondoudou',40:'Grodoudou',41:'Nosferapti',42:'Nosferalto',43:'Mystherbe',44:'Ortide',45:'Rafflesia',46:'Paras',47:'Parasect',48:'Mimitoss',49:'Aéromite',50:'Taupiqueur',51:'Triopikeur',52:'Miaouss',53:'Persian',54:'Psykokwak',55:'Akwakwak',56:'Férosinge',57:'Colossinge',58:'Caninos',59:'Arcanin',60:'Ptitard',61:'Têtarte',62:'Tartard',63:'Abra',64:'Kadabra',65:'Alakazam',66:'Machoc',67:'Machopeur',68:'Mackogneur',69:'Chétiflor',70:'Boustiflor',71:'Empiflor',72:'Tentacool',73:'Tentacruel',74:'Racaillou',75:'Gravalanch',76:'Grolem',77:'Ponyta',78:'Galopa',79:'Ramoloss',80:'Flagadoss',81:'Magnéti',82:'Magnéton',83:'Canarticho',84:'Doduo',85:'Dodrio',86:'Otaria',87:'Lamantine',88:'Tadmorv',89:'Grotadmorv',90:'Kokiyas',91:'Crustabri',92:'Fantominus',93:'Spectrum',94:'Ectoplasma',95:'Onix',96:'Soporifik',97:'Hypnomade',98:'Krabby',99:'Krabboss',100:'Voltorbe',101:'Électrode',102:'Noeunoeuf',103:'Noadkoko',104:'Osselait',105:'Ossatueur',106:'Kicklee',107:'Tygnon',108:'Excelangue',109:'Smogo',110:'Smogogo',111:'Rhinocorne',112:'Rhinoféros',113:'Leveinard',114:'Saquedeneu',115:'Kangourex',116:'Hypotrempe',117:'Hypocéan',118:'Poissirène',119:'Poissoroy',120:'Stari',121:'Staross',122:'M. Mime',123:'Insécateur',124:'Lippoutou',125:'Élektek',126:'Magmar',127:'Scarabrute',128:'Tauros',129:'Magicarpe',130:'Léviator',131:'Lokhlass',132:'Métamorph',133:'Évoli',134:'Aquali',135:'Voltali',136:'Pyroli',137:'Porygon',138:'Amonita',139:'Amonistar',140:'Kabuto',141:'Kabutops',142:'Ptéra',143:'Ronflex',144:'Artikodin',145:'Électhor',146:'Sulfura',147:'Minidraco',148:'Draco',149:'Dracolosse',150:'Mewtwo',151:'Mew',
+  152:'Germignon',153:'Macronium',154:'Méganium',155:'Héricendre',156:'Feurisson',157:'Typhlosion',158:'Kaiminus',159:'Crocrodil',160:'Aligatueur',161:'Fouinette',162:'Fouinar',172:'Pichu',173:'Mélo',174:'Toudoudou',175:'Togepi',176:'Togetic',179:'Wattouat',180:'Lainergie',181:'Pharamp',182:'Joliflor',183:'Marill',184:'Azumarill',186:'Tarpaud',190:'Capumain',193:'Yanma',196:'Mentali',197:'Noctali',198:'Cornèbre',199:'Roigada',200:'Feuforêve',208:'Steelix',212:'Cizayox',230:'Hyporoi',248:'Tyranocif',249:'Lugia',250:'Ho-Oh',251:'Celebi',
+  252:'Arcko',253:'Massko',254:'Jungko',255:'Poussifeu',256:'Galifeu',257:'Braségali',258:'Gobou',259:'Flobio',260:'Laggron',261:'Medhyèna',262:'Grahyèna',263:'Zigzaton',264:'Linéon',265:'Chenipotte',266:'Armulys',267:'Charmillon',268:'Blindalys',269:'Papinox',270:'Nénupiot',271:'Lombre',272:'Ludicolo',273:'Grainipiot',274:'Pifeuil',275:'Tengalice',280:'Tarsal',281:'Kirlia',282:'Gardevoir',303:'Mysdibule',334:'Altaria',350:'Milobellus',373:'Drattak',376:'Métalosse',380:'Latias',381:'Latios',382:'Kyogre',383:'Groudon',384:'Rayquaza',385:'Jirachi',386:'Deoxys',
+  387:'Tortipouss',388:'Boskara',389:'Torterra',390:'Ouisticram',391:'Chimpenfeu',392:'Simiabraz',393:'Tiplouf',394:'Prinplouf',395:'Pingoléon',396:'Étourmi',397:'Étourvol',398:'Étouraptor',399:'Keunotor',400:'Castorno',403:'Lixy',404:'Luxio',405:'Luxray',406:'Rozbouton',407:'Roserade',443:'Griknot',444:'Carmache',445:'Carchacrok',448:'Lucario',460:'Blizzaroi',461:'Dimoret',462:'Magnézone',463:'Coudlangue',464:'Rhinastoc',465:'Bouldeneu',466:'Élekable',467:'Maganon',468:'Togekiss',469:'Yanmega',470:'Phyllali',471:'Givrali',472:'Scorvol',473:'Mammochon',474:'Porygon-Z',475:'Gallame',487:'Giratina',491:'Darkrai',493:'Arceus',
+  494:'Victini',495:'Vipélierre',496:'Lianaja',497:'Majaspic',498:'Gruikui',499:'Grotichon',500:'Roitiflam',501:'Moustillon',502:'Mateloutre',503:'Clamiral',570:'Zorua',571:'Zoroark',582:'Sorbébé',583:'Sorboul',584:'Sorbouboul',607:'Funécire',608:'Mélancolux',609:'Lugulabre',610:'Coupenotte',611:'Incisache',612:'Tranchodon',633:'Solochi',634:'Diamat',635:'Trioxhydre',643:'Reshiram',644:'Zekrom',645:'Démétéros',646:'Kyurem',647:'Keldeo',648:'Meloetta',649:'Genesect'
+};
+
+let frenchNameCache = loadFrenchNameCache();
 let state = loadState();
 
 const $ = (id) => document.getElementById(id);
@@ -117,16 +156,132 @@ function loadState() {
 }
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function slug(name) { return name.toLowerCase().replace(/♀/g, '-f').replace(/♂/g, '-m').replace(/[.’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
-function displayName(name) { return name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace('Nidoran F','Nidoran♀').replace('Nidoran M','Nidoran♂').replace('Mr Mime','M. Mime'); }
+function displayName(name, id = null) {
+  if (id && frenchNameCache[id]) return frenchNameCache[id];
+  if (id && FRENCH_NAME_FALLBACK[id]) return FRENCH_NAME_FALLBACK[id];
+  return name.replace(/-/g, ' ').replace(/\w/g, c => c.toUpperCase()).replace('Nidoran F','Nidoran♀').replace('Nidoran M','Nidoran♂').replace('Mr Mime','M. Mime');
+}
+function displayPokemonName(mon) { return displayName(mon.name, mon.id); }
+
+function loadFrenchNameCache() {
+  try { return JSON.parse(localStorage.getItem(FR_NAMES_STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveFrenchNameCache() { localStorage.setItem(FR_NAMES_STORAGE_KEY, JSON.stringify(frenchNameCache)); }
+function applyFrenchNamesFromCache() { pokemon.forEach(mon => { mon.frName = displayName(mon.name, mon.id); }); }
+async function refreshFrenchNames() {
+  const missing = pokemon.filter(mon => !frenchNameCache[mon.id]).map(mon => mon.id);
+  if (!missing.length) { applyFrenchNamesFromCache(); render(); return; }
+  let changed = false;
+  for (let i = 0; i < missing.length; i += 10) {
+    const batch = missing.slice(i, i + 10);
+    await Promise.all(batch.map(async id => {
+      try {
+        const res = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const fr = data.names?.find(n => n.language?.name === 'fr')?.name;
+        if (fr) { frenchNameCache[id] = fr; changed = true; }
+      } catch {}
+    }));
+    if (changed) { saveFrenchNameCache(); applyFrenchNamesFromCache(); render(); changed = false; }
+  }
+}
 function dexNo(id) { return `#${String(id).padStart(3, '0')}`; }
 function getEntry(id) {
   const entry = state[id] || {};
-  return { shiny: Boolean(entry.shiny), hunts: Array.isArray(entry.hunts) ? entry.hunts : [], shinies: Array.isArray(entry.shinies) ? entry.shinies : [] };
+  const shinies = Array.isArray(entry.shinies) ? entry.shinies : [];
+  const hasRealShiny = shinies.some(s => !s.failed);
+  return { shiny: Boolean(entry.shiny || hasRealShiny), hunts: Array.isArray(entry.hunts) ? entry.hunts : [], shinies };
 }
+function realShinyCount(entry) { return (entry.shinies || []).filter(s => !s.failed).length; }
+function failedShinyCount(entry) { return (entry.shinies || []).filter(s => s.failed).length; }
 function setEntry(id, patch) { state[id] = { ...getEntry(id), ...patch }; saveState(); }
 function generationOf(id) { return GEN_RANGES.find(g => id >= g.start && id <= g.end)?.id || 1; }
 function spriteSrc(mon, shiny = false) { return `${LOCAL_SPRITE_BASE}/${shiny ? 'shiny' : 'regular'}/${slug(mon.name)}.png`; }
 function fallbackSprite(mon, shiny = false) { return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${shiny ? 'shiny/' : ''}${mon.id}.png`; }
+
+function gameVersionSpriteSrc(mon, record = {}) {
+  const game = String(record.game || '').trim();
+  const id = mon.id;
+  const base = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions';
+  const map = {
+    'Or': `${base}/generation-ii/gold/shiny/${id}.png`,
+    'Argent': `${base}/generation-ii/silver/shiny/${id}.png`,
+    'Cristal': `${base}/generation-ii/crystal/shiny/${id}.png`,
+    'Rubis': `${base}/generation-iii/ruby-sapphire/shiny/${id}.png`,
+    'Saphir': `${base}/generation-iii/ruby-sapphire/shiny/${id}.png`,
+    'Émeraude': `${base}/generation-iii/emerald/shiny/${id}.png`,
+    'Emeraude': `${base}/generation-iii/emerald/shiny/${id}.png`,
+    'Rouge Feu': `${base}/generation-iii/firered-leafgreen/shiny/${id}.png`,
+    'Vert Feuille': `${base}/generation-iii/firered-leafgreen/shiny/${id}.png`,
+    'Diamant': `${base}/generation-iv/diamond-pearl/shiny/${id}.png`,
+    'Perle': `${base}/generation-iv/diamond-pearl/shiny/${id}.png`,
+    'Platine': `${base}/generation-iv/platinum/shiny/${id}.png`,
+    'HeartGold': `${base}/generation-iv/heartgold-soulsilver/shiny/${id}.png`,
+    'SoulSilver': `${base}/generation-iv/heartgold-soulsilver/shiny/${id}.png`,
+    'Noir': `${base}/generation-v/black-white/animated/shiny/${id}.gif`,
+    'Blanc': `${base}/generation-v/black-white/animated/shiny/${id}.gif`,
+    'Noir 2': `${base}/generation-v/black-white/animated/shiny/${id}.gif`,
+    'Blanc 2': `${base}/generation-v/black-white/animated/shiny/${id}.gif`,
+  };
+  return map[game] || spriteSrc(mon, true);
+}
+
+function collectionSpriteSrc(mon, record = {}) {
+  return gameVersionSpriteSrc(mon, record);
+}
+
+function collectionSpriteFallback(mon) {
+  return fallbackSprite(mon, true);
+}
+
+function dexSpriteRecord(mon, entry) {
+  const valid = (entry.shinies || []).filter(s => !s.failed);
+  if (!valid.length) return null;
+
+  // Option B : une seule chance par version unique.
+  // Deux shinys sur Rouge Feu + un sur HeartGold = 50% Rouge Feu / 50% HeartGold.
+  const byGame = new Map();
+  valid.forEach(record => {
+    const game = String(record.game || 'Jeu non indiqué').trim() || 'Jeu non indiqué';
+    if (!byGame.has(game)) byGame.set(game, record);
+  });
+
+  const uniqueRecords = [...byGame.values()];
+  if (uniqueRecords.length === 1) return uniqueRecords[0];
+
+  const key = uniqueRecords.map(r => String(r.game || 'Jeu non indiqué').trim()).sort().join('|');
+  const cacheKey = `${mon.id}:${key}`;
+  const cachedGame = dexSpriteChoiceCache[cacheKey];
+  if (cachedGame) {
+    const cached = uniqueRecords.find(r => String(r.game || 'Jeu non indiqué').trim() === cachedGame);
+    if (cached) return cached;
+  }
+
+  const selected = uniqueRecords[Math.floor(Math.random() * uniqueRecords.length)];
+  dexSpriteChoiceCache[cacheKey] = String(selected.game || 'Jeu non indiqué').trim();
+  return selected;
+}
+
+function dexSpriteSrc(mon, entry) {
+  if (!entry.shiny) return spriteSrc(mon, false);
+  const record = dexSpriteRecord(mon, entry);
+  return record ? gameVersionSpriteSrc(mon, record) : spriteSrc(mon, true);
+}
+
+function dexSpriteFallback(mon, entry) {
+  return entry.shiny ? fallbackSprite(mon, true) : fallbackSprite(mon, false);
+}
+
+function spriteSourceLabel(record = {}) {
+  const game = String(record.game || '').trim();
+  if (['Noir', 'Blanc', 'Noir 2', 'Blanc 2'].includes(game)) return 'Sprite animé 5G';
+  if (['Diamant', 'Perle', 'Platine', 'HeartGold', 'SoulSilver'].includes(game)) return 'Sprite version 4G';
+  if (['Rubis', 'Saphir', 'Émeraude', 'Emeraude', 'Rouge Feu', 'Vert Feuille'].includes(game)) return 'Sprite version 3G';
+  if (['Or', 'Argent', 'Cristal'].includes(game)) return 'Sprite version 2G';
+  return 'Sprite shiny';
+}
 
 async function init() {
   buildViewTabs();
@@ -142,9 +297,12 @@ async function loadPokemon() {
     if (!res.ok) throw new Error('PokéAPI indisponible');
     const data = await res.json();
     pokemon = data.results.map((p, i) => ({ id: i + 1, name: p.name, gen: generationOf(i + 1) }));
+    applyFrenchNamesFromCache();
+    refreshFrenchNames();
     $('notice').innerHTML = 'Pokédex chargé. Les données sont sauvegardées automatiquement dans ce navigateur.';
   } catch (err) {
     pokemon = FALLBACK_NAMES.map((name, i) => ({ id: i + 1, name, gen: 1 }));
+    applyFrenchNamesFromCache();
     $('notice').innerHTML = 'Mode hors-ligne partiel : seule la Gen 1 est disponible sans connexion. Ouvre la page avec Internet une fois pour charger les 649 Pokémon.';
   }
 }
@@ -197,7 +355,7 @@ function filteredPokemon() {
   return pokemon.filter(mon => {
     const entry = getEntry(mon.id);
     if (mon.gen !== currentGen) return false;
-    if (term && !mon.name.includes(term) && !String(mon.id).includes(term)) return false;
+    if (term && !mon.name.includes(term) && !(mon.frName || '').toLowerCase().includes(term) && !String(mon.id).includes(term)) return false;
     if (onlyHunted && !entry.hunts.length) return false;
     if (onlyMissing && entry.shiny) return false;
     return true;
@@ -389,16 +547,22 @@ function shinyThemeStyle(mon) {
 }
 
 function collectionCardHTML(mon, shiny, index) {
-  return `<article class="pokemon-card collection-card shiny-owned" data-shiny-theme="1" data-mon-id="${mon.id}" data-mon-name="${mon.name}" ${shinyThemeStyle(mon)}>
+  const failed = Boolean(shiny.failed);
+  const imgClass = failed ? 'failed-sprite' : '';
+  const cardClass = failed ? 'failed-shiny-card' : 'shiny-owned';
+  const themeData = failed ? '' : `data-shiny-theme="1" data-mon-id="${mon.id}" data-mon-name="${mon.name}" ${shinyThemeStyle(mon)}`;
+  return `<article class="pokemon-card collection-card ${cardClass}" ${themeData}>
     <div class="dex-number">${dexNo(mon.id)} · shiny #${index + 1}</div>
-    <div class="sprite-wrap"><img crossorigin="anonymous" src="${spriteSrc(mon, true)}" alt="${displayName(mon.name)} shiny" onerror="this.onerror=null;this.src='${fallbackSprite(mon, true)}'"></div>
-    <h3>${displayName(mon.name)}</h3>
+    <div class="sprite-wrap"><img crossorigin="anonymous" class="${imgClass}" src="${collectionSpriteSrc(mon, shiny)}" alt="${displayPokemonName(mon)} shiny" onerror="this.onerror=function(){this.style.visibility='hidden'};this.src='${collectionSpriteFallback(mon)}'"></div>
+    <h3>${displayPokemonName(mon)}</h3>
+    <div class="badges">${failed ? '<span class="badge fail">Fail</span>' : '<span class="badge shiny">Shiny obtenu</span>'}</div>
     <div class="mini-details">
       <p><b>Jeu :</b> ${gameNameHTML(shiny.game || 'Non indiqué')}</p>
       <p><b>Méthode :</b> ${escapeHTML(shiny.method || 'Non indiquée')}</p>
       ${shiny.location ? `<p><b>Lieu :</b> ${escapeHTML(shiny.location)}</p>` : ''}
       ${shiny.seen ? `<p><b>Rencontres :</b> ${escapeHTML(String(shiny.seen))}</p>` : ''}
       ${shiny.phases ? `<p><b>Phases :</b> ${escapeHTML(String(shiny.phases))}</p>` : ''}
+      <p class="sprite-source-note">${spriteSourceLabel(shiny)}</p>
     </div>
     <div class="card-actions"><button data-open="${mon.id}">Voir / modifier</button><button class="danger-btn" data-delete-shiny="${mon.id}" data-shiny-index="${index}">Supprimer</button></div>
   </article>`;
@@ -420,9 +584,9 @@ function gameHuntRowHTML(mon, hunt, index, visibleGame = '') {
   const entry = getEntry(mon.id);
   const key = huntKey(hunt, index);
   return `<article class="game-hunt-row">
-    <img src="${entry.shiny ? spriteSrc(mon, true) : spriteSrc(mon, false)}" class="${entry.shiny ? '' : 'missing'}" alt="${displayName(mon.name)}" onerror="this.onerror=null;this.src='${fallbackSprite(mon, entry.shiny)}'">
+    <img src="${entry.shiny ? spriteSrc(mon, true) : spriteSrc(mon, false)}" class="${entry.shiny ? '' : 'missing'}" alt="${displayPokemonName(mon)}" onerror="this.onerror=null;this.src='${fallbackSprite(mon, entry.shiny)}'">
     <div>
-      <h3>${dexNo(mon.id)} · ${displayName(mon.name)}</h3>
+      <h3>${dexNo(mon.id)} · ${displayPokemonName(mon)}</h3>
       <p><b>Jeu :</b> ${gameNameHTML(visibleGame || hunt.game || 'Jeu non indiqué')}</p>
       <p><b>${escapeHTML(hunt.method || 'Méthode non indiquée')}</b> · ${escapeHTML(String(hunt.encounter || 0))}% · ${statusLabel(hunt.status)}</p>
       ${hunt.location ? `<p><b>Lieu :</b> ${escapeHTML(hunt.location)}</p>` : ''}
@@ -439,14 +603,15 @@ function gameHuntRowHTML(mon, hunt, index, visibleGame = '') {
 
 function cardHTML(mon) {
   const entry = getEntry(mon.id);
-  const src = entry.shiny ? spriteSrc(mon, true) : spriteSrc(mon, false);
+  const src = dexSpriteSrc(mon, entry);
   return `<article class="pokemon-card ${entry.shiny ? 'shiny-owned' : ''}" ${entry.shiny ? `data-shiny-theme="1" data-mon-id="${mon.id}" data-mon-name="${mon.name}" ${shinyThemeStyle(mon)}` : ''}>
     <div class="dex-number">${dexNo(mon.id)}</div>
-    <div class="sprite-wrap"><img crossorigin="anonymous" class="${entry.shiny ? '' : 'missing'}" src="${src}" alt="${displayName(mon.name)}" onerror="this.onerror=null;this.src='${fallbackSprite(mon, entry.shiny)}'"></div>
-    <h3>${displayName(mon.name)}</h3>
+    <div class="sprite-wrap"><img crossorigin="anonymous" class="${entry.shiny ? '' : 'missing'}" src="${src}" alt="${displayPokemonName(mon)}" onerror="this.onerror=function(){this.style.visibility='hidden'};this.src='${dexSpriteFallback(mon, entry)}'"></div>
+    <h3>${displayPokemonName(mon)}</h3>
     <div class="badges">
       <span class="badge ${entry.shiny ? 'shiny' : ''}">${entry.shiny ? 'Shiny obtenu' : 'À obtenir'}</span>
-      ${entry.shinies.length ? `<span class="badge shiny">${entry.shinies.length} shiny${entry.shinies.length > 1 ? 's' : ''}</span>` : ''}
+      ${realShinyCount(entry) ? `<span class="badge shiny">${realShinyCount(entry)} shiny${realShinyCount(entry) > 1 ? 's' : ''}</span>` : ''}
+      ${failedShinyCount(entry) ? `<span class="badge fail">${failedShinyCount(entry)} fail${failedShinyCount(entry) > 1 ? 's' : ''}</span>` : ''}
       ${entry.hunts.length ? `<span class="badge hunt">${entry.hunts.length} shasse${entry.hunts.length > 1 ? 's' : ''}</span>` : ''}
     </div>
     <div class="card-actions">
@@ -465,8 +630,20 @@ function applyShinyCardThemes() {
   document.querySelectorAll('.pokemon-card.shiny-owned[data-shiny-theme="1"]').forEach(card => {
     const monId = Number(card.dataset.monId || 0);
     const monName = card.dataset.monName || '';
-    const rgb = shinyThemeColor(monId, monName) || shinyFallbackColor(monId, monName);
-    setCardTheme(card, rgb);
+    const mapped = shinyThemeColor(monId, monName);
+    setCardTheme(card, mapped || shinyFallbackColor(monId, monName));
+
+    // Si le sprite local est lisible, on peut affiner automatiquement la couleur.
+    // Les couleurs fixes gardent toujours la priorité pour les cas corrigés à la main.
+    if (SHINY_COLOR_MAP[monId] || SHINY_COLOR_OVERRIDE_MAP[monId]) return;
+    const img = card.querySelector('.sprite-wrap img');
+    if (!img) return;
+    const applyFromImage = () => {
+      const extracted = extractDominantColor(img);
+      if (extracted) setCardTheme(card, extracted);
+    };
+    if (img.complete) applyFromImage();
+    else img.addEventListener('load', applyFromImage, { once: true });
   });
 }
 
@@ -500,8 +677,53 @@ function hashName(name = '') {
   return h;
 }
 
-function extractDominantColor() {
-  return null;
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    switch (max) {
+      case r: h = ((g - b) / d) % 6; break;
+      case g: h = (b - r) / d + 2; break;
+      default: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s: max === 0 ? 0 : d / max, v: max };
+}
+
+function extractDominantColor(img) {
+  try {
+    const canvas = document.createElement('canvas');
+    const size = 32;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, size, size);
+    const { data } = ctx.getImageData(0, 0, size, size);
+    const bins = new Array(24).fill(0).map(() => ({ score: 0, r: 0, g: 0, b: 0, weight: 0 }));
+    for (let i = 0; i < data.length; i += 4) {
+      const alpha = data[i + 3];
+      if (alpha < 45) continue;
+      const pr = data[i], pg = data[i + 1], pb = data[i + 2];
+      const { h, s, v } = rgbToHsv(pr, pg, pb);
+      if (v < .12 || s < .18) continue;
+      const idx = Math.max(0, Math.min(23, Math.floor(h / 15)));
+      const weight = (alpha / 255) * (0.6 + s * 2.6) * (0.65 + v);
+      bins[idx].score += weight;
+      bins[idx].r += pr * weight;
+      bins[idx].g += pg * weight;
+      bins[idx].b += pb * weight;
+      bins[idx].weight += weight;
+    }
+    let best = bins.reduce((a, b) => b.score > a.score ? b : a, bins[0]);
+    if (!best || best.weight < .8) return null;
+    return `${Math.round(best.r / best.weight)}, ${Math.round(best.g / best.weight)}, ${Math.round(best.b / best.weight)}`;
+  } catch {
+    return null;
+  }
 }
 
 function closeHuntDialog() {
@@ -517,7 +739,7 @@ function renderStats() {
   const total = pokemon.length || 649;
   const shiny = pokemon.filter(mon => getEntry(mon.id).shiny).length;
   const hunts = pokemon.reduce((sum, mon) => sum + getEntry(mon.id).hunts.length, 0);
-  const shinyCopies = pokemon.reduce((sum, mon) => sum + getEntry(mon.id).shinies.length, 0);
+  const shinyCopies = pokemon.reduce((sum, mon) => sum + realShinyCount(getEntry(mon.id)), 0);
   $('stats').innerHTML = `
     <div class="stat-card"><strong>${shiny}</strong><span>espèces shiny</span></div>
     <div class="stat-card"><strong>${shinyCopies}</strong><span>shinys collection</span></div>
@@ -528,20 +750,24 @@ function setDialogMode(mode, isEditing = false) {
   dialogMode = mode;
   const submit = $('submitDialogBtn');
   const markLabel = $('markShinyInput')?.closest('label');
+  const failLabel = $('failedShinyInput')?.closest('label');
   const status = $('statusInput');
 
   if (mode === 'shiny') {
     if (submit) submit.textContent = 'Ajouter le shiny';
     if (markLabel) markLabel.style.display = 'none';
+    if (failLabel) failLabel.style.display = '';
     if (status) status.value = 'done';
     $('dialogFamily').textContent = 'Mode collection : ce bouton ajoute uniquement un shiny, sans créer de shasse.';
   } else if (isEditing) {
     if (submit) submit.textContent = 'Mettre à jour la shasse';
     if (markLabel) markLabel.style.display = '';
+    if (failLabel) failLabel.style.display = '';
     $('dialogFamily').textContent = 'Modification : les infos de la shasse sélectionnée sont préremplies.';
   } else {
     if (submit) submit.textContent = 'Enregistrer la shasse';
     if (markLabel) markLabel.style.display = '';
+    if (failLabel) failLabel.style.display = '';
     $('dialogFamily').textContent = 'Astuce : “évolutions” ne duplique plus les shasses. Si le shiny est obtenu, la famille sera marquée shiny.';
   }
   ['gameInput', 'methodInput', 'statusInput'].forEach(id => refreshSelectTheme($(id)));
@@ -558,6 +784,7 @@ function fillFormFromHunt(hunt = {}) {
   $('notesInput').value = hunt.notes || '';
   $('applyEvolutionInput').checked = Boolean(hunt.applyToEvolutions);
   $('markShinyInput').checked = hunt.status === 'done';
+  $('failedShinyInput').checked = false;
   ['gameInput', 'methodInput', 'statusInput'].forEach(id => refreshSelectTheme($(id)));
 }
 
@@ -577,7 +804,7 @@ function openDialog(id, shinyMode = false, options = {}) {
   $('huntForm').reset();
   editingHunt = null;
 
-  $('dialogTitle').textContent = displayName(selectedPokemon.name);
+  $('dialogTitle').textContent = displayPokemonName(selectedPokemon);
   $('dialogNumber').textContent = dexNo(id);
   $('dialogSprite').src = entry.shiny ? spriteSrc(selectedPokemon, true) : spriteSrc(selectedPokemon, false);
   $('dialogSprite').onerror = () => { $('dialogSprite').onerror = null; $('dialogSprite').src = fallbackSprite(selectedPokemon, entry.shiny); };
@@ -594,10 +821,12 @@ function openDialog(id, shinyMode = false, options = {}) {
   } else if (shinyMode) {
     $('statusInput').value = 'done';
     $('markShinyInput').checked = true;
+    $('failedShinyInput').checked = false;
     setDialogMode('shiny');
   } else {
     $('statusInput').value = 'planned';
     $('markShinyInput').checked = false;
+    $('failedShinyInput').checked = false;
     setDialogMode('hunt');
   }
 
@@ -623,9 +852,9 @@ function renderHuntList(id) {
 
 function renderCollectionList(id) {
   const shinies = getEntry(id).shinies;
-  $('collectionList').innerHTML = `<h3 class="list-title">Collection shiny</h3>` + (shinies.length ? shinies.map((s, index) => `<div class="hunt-row shiny-row hunt-row-with-action">
+  $('collectionList').innerHTML = `<h3 class="list-title">Collection shiny</h3>` + (shinies.length ? shinies.map((s, index) => `<div class="hunt-row shiny-row hunt-row-with-action ${s.failed ? 'failed-row' : ''}">
     <div>
-      <strong>${gameNameHTML(s.game || 'Jeu non indiqué')}</strong> · ${escapeHTML(s.method || 'Méthode non indiquée')}
+      <strong>${gameNameHTML(s.game || 'Jeu non indiqué')}</strong> · ${escapeHTML(s.method || 'Méthode non indiquée')} ${s.failed ? '<span class="badge fail">Fail</span>' : '<span class="badge shiny">Obtenu</span>'}
       ${s.location ? `<p><b>Lieu :</b> ${escapeHTML(s.location)}</p>` : ''}
       ${s.seen ? `<p><b>Rencontres :</b> ${escapeHTML(String(s.seen))}</p>` : ''}
       ${s.phases ? `<p><b>Phases :</b> ${escapeHTML(String(s.phases))}</p>` : ''}
@@ -657,7 +886,8 @@ async function saveHuntFromDialog(e) {
     createdAt: existingCreatedAt || new Date().toISOString(),
   };
 
-  const isShinyObtained = dialogMode === 'shiny' || $('markShinyInput').checked || hunt.status === 'done';
+  const isFailedShiny = $('failedShinyInput').checked;
+  const isCollectionRecord = isFailedShiny || dialogMode === 'shiny' || $('markShinyInput').checked || hunt.status === 'done';
   const shinyRecord = {
     game: hunt.game,
     method: hunt.method,
@@ -668,12 +898,13 @@ async function saveHuntFromDialog(e) {
     notes: hunt.notes,
     createdAt: new Date().toISOString(),
     sourceHuntCreatedAt: hunt.createdAt,
+    failed: isFailedShiny,
   };
 
-  const shouldApplyToEvolutions = $('applyEvolutionInput').checked || Boolean(hunt.applyToEvolutions);
+  const shouldApplyToEvolutions = !isFailedShiny && ($('applyEvolutionInput').checked || Boolean(hunt.applyToEvolutions));
   const shinyIds = shouldApplyToEvolutions ? await getEvolutionFamilyIds(selectedPokemon.id) : [selectedPokemon.id];
 
-  if (isShinyObtained) {
+  if (isCollectionRecord) {
     // Un shiny obtenu ne crée pas de nouvelle shasse.
     // Si on modifiait une shasse existante, elle est retirée car elle est terminée.
     shinyIds.forEach(id => addShinyRecord(id, shinyRecord));
@@ -702,9 +933,10 @@ async function saveHuntFromDialog(e) {
 
 function addShinyRecord(id, shinyRecord) {
   const entry = getEntry(id);
+  const shinies = [...entry.shinies, shinyRecord];
   setEntry(id, {
-    shiny: true,
-    shinies: [...entry.shinies, shinyRecord],
+    shiny: shinies.some(s => !s.failed),
+    shinies,
   });
 }
 
@@ -750,8 +982,9 @@ function deleteHunt(id, index, key = '') {
   }
   if (!entry.hunts[targetIndex]) return;
   const hunt = entry.hunts[targetIndex];
-  const name = pokemon.find(p => p.id === id)?.name || `Pokémon ${id}`;
-  const ok = confirm(`Supprimer cette shasse de ${displayName(name)} ?\n${hunt.game || 'Jeu non indiqué'} · ${hunt.method || 'Méthode non indiquée'}`);
+  const mon = pokemon.find(p => p.id === id);
+  const name = mon ? displayPokemonName(mon) : `Pokémon ${id}`;
+  const ok = confirm(`Supprimer cette shasse de ${name} ?\n${hunt.game || 'Jeu non indiqué'} · ${hunt.method || 'Méthode non indiquée'}`);
   if (!ok) return;
   if (hunt.createdAt) {
     Object.keys(state).forEach(entryId => {
@@ -771,11 +1004,12 @@ function deleteShiny(id, index) {
   const entry = getEntry(id);
   if (!entry.shinies[index]) return;
   const shiny = entry.shinies[index];
-  const name = pokemon.find(p => p.id === id)?.name || `Pokémon ${id}`;
-  const ok = confirm(`Supprimer ce shiny de la collection ?\n${displayName(name)} · ${shiny.game || 'Jeu non indiqué'}`);
+  const mon = pokemon.find(p => p.id === id);
+  const name = mon ? displayPokemonName(mon) : `Pokémon ${id}`;
+  const ok = confirm(`Supprimer ce shiny de la collection ?\n${name} · ${shiny.game || 'Jeu non indiqué'}`);
   if (!ok) return;
   const shinies = entry.shinies.filter((_, i) => i !== index);
-  setEntry(id, { shinies, shiny: shinies.length > 0 });
+  setEntry(id, { shinies, shiny: shinies.some(s => !s.failed) });
   if (selectedPokemon && selectedPokemon.id === id) renderCollectionList(id);
   render();
 }
@@ -783,7 +1017,7 @@ function deleteShiny(id, index) {
 function exportData() {
   const payload = {
     app: 'Site Shiny',
-    version: 18,
+    version: 25,
     exportedAt: new Date().toISOString(),
     storageKey: STORAGE_KEY,
     data: state,
@@ -826,16 +1060,33 @@ function importData(event) {
 
 async function getEvolutionFamilyIds(id) {
   try {
+    const selected = pokemon.find(p => p.id === id);
+    if (!selected) return [id];
+
     const species = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`).then(r => r.json());
     const chain = await fetch(species.evolution_chain.url).then(r => r.json());
+    const startNode = findChainNode(chain.chain, selected.name);
+    if (!startNode) return [id];
+
     const names = [];
-    walkChain(chain.chain, names);
+    walkChain(startNode, names);
     return pokemon.filter(p => names.includes(p.name) && p.id <= 649).map(p => p.id);
   } catch {
-    alert('Impossible de récupérer les évolutions. La shasse sera ajoutée uniquement à ce Pokémon.');
+    alert('Impossible de récupérer les évolutions descendantes. La shasse sera ajoutée uniquement à ce Pokémon.');
     return [id];
   }
 }
+
+function findChainNode(node, targetName) {
+  if (!node) return null;
+  if (node.species?.name === targetName) return node;
+  for (const child of node.evolves_to || []) {
+    const found = findChainNode(child, targetName);
+    if (found) return found;
+  }
+  return null;
+}
+
 function walkChain(node, out) {
   if (!node) return;
   out.push(node.species.name);

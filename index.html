@@ -6,11 +6,11 @@
   <title>Pokédex Shiny & Shasses</title>
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-  <link rel="manifest" href="manifest.json?v=18" />
+  <link rel="manifest" href="manifest.json?v=25" />
   <meta name="theme-color" content="#100f18" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ShinyDex" />
-  <link rel="stylesheet" href="Shiny.css?v=18" />
+  <link rel="stylesheet" href="Shiny.css?v=25" />
 </head>
 <body>
   <header class="hero">
@@ -140,6 +140,7 @@
       <div class="checks">
         <label><input id="applyEvolutionInput" type="checkbox" /> Appliquer la même shasse aux évolutions aussi</label>
         <label><input id="markShinyInput" type="checkbox" /> Marquer comme shiny obtenu</label>
+        <label><input id="failedShinyInput" type="checkbox" /> Fail / shiny raté</label>
       </div>
 
       <div class="dialog-actions">
@@ -152,7 +153,7 @@
     </form>
   </dialog>
 
-  <script src="Shiny.js?v=18"></script>
+  <script src="Shiny.js?v=25"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {

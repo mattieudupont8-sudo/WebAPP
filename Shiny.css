@@ -396,3 +396,43 @@ select#statusInput.themed-select option {
     width: min(96vw, 760px);
   }
 }
+
+
+/* V19 : shiny fail + sprites de collection par jeu */
+.pokemon-card.failed-shiny-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.045));
+  border-color: rgba(255,255,255,.12);
+  box-shadow: var(--shadow);
+}
+.pokemon-card.failed-shiny-card::before {
+  background: rgba(255,255,255,.055);
+}
+.pokemon-card.failed-shiny-card .sprite-wrap img,
+.sprite-wrap img.failed-sprite {
+  filter: grayscale(1) brightness(.6);
+  opacity: .72;
+}
+.badge.fail {
+  background: rgba(255,107,122,.16);
+  color: var(--danger);
+}
+.shiny-row.failed-row {
+  border-color: rgba(255,107,122,.24);
+  background: rgba(255,107,122,.075);
+}
+.collection-card.failed-shiny-card .mini-details::before {
+  content: "Fail / shiny raté";
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: .25rem;
+  padding: .22rem .52rem;
+  border-radius: 999px;
+  color: var(--danger);
+  background: rgba(255,107,122,.16);
+  font-weight: 900;
+}
+.sprite-source-note {
+  color: var(--muted);
+  opacity: .9;
+  font-size: .72rem;
+}
