@@ -30,6 +30,7 @@ let currentView = 'dex';
 let selectedPokemon = null;
 let dialogMode = 'hunt';
 let editingHunt = null;
+let editingShiny = null;
 const shinyCardColorCache = {};
 const dexSpriteChoiceCache = {};
 
@@ -385,6 +386,7 @@ function render() {
 function bindCardButtons() {
   $('dexGrid').querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => openDialog(Number(btn.dataset.open))));
   $('dexGrid').querySelectorAll('[data-open-hunt]').forEach(btn => btn.addEventListener('click', () => openDialog(Number(btn.dataset.openHunt), false, { huntIndex: Number(btn.dataset.huntIndex), huntKey: btn.dataset.huntKey || '' })));
+  $('dexGrid').querySelectorAll('[data-open-shiny]').forEach(btn => btn.addEventListener('click', () => openDialog(Number(btn.dataset.openShiny), false, { shinyIndex: Number(btn.dataset.shinyIndex) })));
   $('dexGrid').querySelectorAll('[data-toggle]').forEach(btn => btn.addEventListener('click', () => openDialog(Number(btn.dataset.toggle), true)));
   $('dexGrid').querySelectorAll('[data-delete-hunt]').forEach(btn => btn.addEventListener('click', () => deleteHunt(Number(btn.dataset.deleteHunt), Number(btn.dataset.huntIndex), btn.dataset.huntKey)));
   $('dexGrid').querySelectorAll('[data-delete-shiny]').forEach(btn => btn.addEventListener('click', () => deleteShiny(Number(btn.dataset.deleteShiny), Number(btn.dataset.shinyIndex))));
@@ -564,7 +566,7 @@ function collectionCardHTML(mon, shiny, index) {
       ${shiny.phases ? `<p><b>Phases :</b> ${escapeHTML(String(shiny.phases))}</p>` : ''}
       <p class="sprite-source-note">${spriteSourceLabel(shiny)}</p>
     </div>
-    <div class="card-actions"><button data-open="${mon.id}">Voir / modifier</button><button class="danger-btn" data-delete-shiny="${mon.id}" data-shiny-index="${index}">Supprimer</button></div>
+    <div class="card-actions"><button data-open-shiny="${mon.id}" data-shiny-index="${index}">Voir / modifier</button><button class="danger-btn" data-delete-shiny="${mon.id}" data-shiny-index="${index}">Supprimer</button></div>
   </article>`;
 }
 
@@ -732,6 +734,7 @@ function closeHuntDialog() {
   selectedPokemon = null;
   dialogMode = 'hunt';
   editingHunt = null;
+  editingShiny = null;
   setDialogMode('hunt');
 }
 
@@ -759,6 +762,12 @@ function setDialogMode(mode, isEditing = false) {
     if (failLabel) failLabel.style.display = '';
     if (status) status.value = 'done';
     $('dialogFamily').textContent = 'Mode collection : ce bouton ajoute uniquement un shiny, sans créer de shasse.';
+  } else if (mode === 'edit-shiny') {
+    if (submit) submit.textContent = 'Mettre à jour le shiny';
+    if (markLabel) markLabel.style.display = 'none';
+    if (failLabel) failLabel.style.display = '';
+    if (status) status.value = 'done';
+    $('dialogFamily').textContent = 'Modification collection : les infos du shiny sélectionné sont préremplies.';
   } else if (isEditing) {
     if (submit) submit.textContent = 'Mettre à jour la shasse';
     if (markLabel) markLabel.style.display = '';
@@ -788,6 +797,21 @@ function fillFormFromHunt(hunt = {}) {
   ['gameInput', 'methodInput', 'statusInput'].forEach(id => refreshSelectTheme($(id)));
 }
 
+function fillFormFromShiny(shiny = {}) {
+  $('gameInput').value = shiny.game || '';
+  $('methodInput').value = shiny.method || '';
+  $('encounterInput').value = shiny.encounter || '';
+  $('seenInput').value = shiny.seen || '';
+  $('phaseInput').value = shiny.phases || '';
+  $('locationInput').value = shiny.location || '';
+  $('statusInput').value = 'done';
+  $('notesInput').value = shiny.notes || '';
+  $('applyEvolutionInput').checked = false;
+  $('markShinyInput').checked = !shiny.failed;
+  $('failedShinyInput').checked = Boolean(shiny.failed);
+  ['gameInput', 'methodInput', 'statusInput'].forEach(id => refreshSelectTheme($(id)));
+}
+
 function findHuntIndex(entry, index, key = '') {
   let targetIndex = Number.isInteger(index) ? index : -1;
   if (key) {
@@ -803,6 +827,7 @@ function openDialog(id, shinyMode = false, options = {}) {
   const entry = getEntry(id);
   $('huntForm').reset();
   editingHunt = null;
+  editingShiny = null;
 
   $('dialogTitle').textContent = displayPokemonName(selectedPokemon);
   $('dialogNumber').textContent = dexNo(id);
@@ -817,6 +842,15 @@ function openDialog(id, shinyMode = false, options = {}) {
       setDialogMode('hunt', true);
     } else {
       setDialogMode('hunt', false);
+    }
+  } else if (options && Number.isInteger(options.shinyIndex)) {
+    const targetIndex = options.shinyIndex;
+    if (entry.shinies[targetIndex]) {
+      editingShiny = { id, index: targetIndex, createdAt: entry.shinies[targetIndex].createdAt || '' };
+      fillFormFromShiny(entry.shinies[targetIndex]);
+      setDialogMode('edit-shiny');
+    } else {
+      setDialogMode('shiny');
     }
   } else if (shinyMode) {
     $('statusInput').value = 'done';
@@ -860,8 +894,9 @@ function renderCollectionList(id) {
       ${s.phases ? `<p><b>Phases :</b> ${escapeHTML(String(s.phases))}</p>` : ''}
       ${s.notes ? `<p>${escapeHTML(s.notes)}</p>` : ''}
     </div>
-    <button type="button" class="danger-btn" data-delete-shiny="${id}" data-shiny-index="${index}">Supprimer</button>
+    <div class="row-actions"><button type="button" data-open-shiny="${id}" data-shiny-index="${index}">Modifier</button><button type="button" class="danger-btn" data-delete-shiny="${id}" data-shiny-index="${index}">Supprimer</button></div>
   </div>`).join('') : '<p class="family-line">Aucun shiny dans la collection pour ce Pokémon.</p>');
+  $('collectionList').querySelectorAll('[data-open-shiny]').forEach(btn => btn.addEventListener('click', () => openDialog(Number(btn.dataset.openShiny), false, { shinyIndex: Number(btn.dataset.shinyIndex) })));
   $('collectionList').querySelectorAll('[data-delete-shiny]').forEach(btn => btn.addEventListener('click', () => deleteShiny(Number(btn.dataset.deleteShiny), Number(btn.dataset.shinyIndex))));
 }
 
@@ -901,6 +936,31 @@ async function saveHuntFromDialog(e) {
     failed: isFailedShiny,
   };
 
+  if (editingShiny) {
+    const entry = getEntry(editingShiny.id);
+    const targetIndex = editingShiny.index;
+    if (entry.shinies[targetIndex]) {
+      const updatedRecord = {
+        ...entry.shinies[targetIndex],
+        ...shinyRecord,
+        createdAt: editingShiny.createdAt || entry.shinies[targetIndex].createdAt || shinyRecord.createdAt,
+        modifiedAt: new Date().toISOString(),
+      };
+      const shinies = entry.shinies.map((oldShiny, i) => i === targetIndex ? updatedRecord : oldShiny);
+      setEntry(editingShiny.id, { shinies, shiny: shinies.some(s => !s.failed) });
+    }
+
+    const keepId = selectedPokemon.id;
+    e.target.reset();
+    editingShiny = null;
+    editingHunt = null;
+    setDialogMode('hunt');
+    renderCollectionList(keepId);
+    renderHuntList(keepId);
+    render();
+    return;
+  }
+
   const shouldApplyToEvolutions = !isFailedShiny && ($('applyEvolutionInput').checked || Boolean(hunt.applyToEvolutions));
   const shinyIds = shouldApplyToEvolutions ? await getEvolutionFamilyIds(selectedPokemon.id) : [selectedPokemon.id];
 
@@ -925,6 +985,7 @@ async function saveHuntFromDialog(e) {
   const keepId = selectedPokemon.id;
   e.target.reset();
   editingHunt = null;
+  editingShiny = null;
   setDialogMode('hunt');
   renderCollectionList(keepId);
   renderHuntList(keepId);
@@ -1017,7 +1078,7 @@ function deleteShiny(id, index) {
 function exportData() {
   const payload = {
     app: 'Site Shiny',
-    version: 25,
+    version: 26,
     exportedAt: new Date().toISOString(),
     storageKey: STORAGE_KEY,
     data: state,

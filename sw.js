@@ -1,10 +1,10 @@
-const CACHE_NAME = 'site-shiny-v25';
+const CACHE_NAME = 'site-shiny-v26';
 const APP_SHELL = [
   './',
   './index.html',
   './Shiny.html',
-  './Shiny.css?v=25',
-  './Shiny.js?v=25',
+  './Shiny.css?v=26',
+  './Shiny.js?v=26',
   './manifest.json',
   './logo-honor-ball.png',
   './icons/favicon-32.png',
