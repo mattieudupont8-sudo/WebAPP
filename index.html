@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pokédex Shiny & Shasses</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#100f18" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ShinyDex" />
+  <link rel="stylesheet" href="Shiny.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="brand-block">
+      <img src="logo-honor-ball.png" alt="Logo Honor Ball" class="site-logo" />
+      <div>
+        <p class="eyebrow">Pokédex de shasse personnel</p>
+        <h1>Mes shinys & mes shasses</h1>
+        <p class="subtitle">Générations 1 à 5, suivi shiny, préparation des méthodes, jeux et taux de rencontre.</p>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <main class="app-shell">
+    <section class="view-toolbar">
+      <div class="tabs main-tabs" id="viewTabs"></div>
+      <div class="data-actions">
+        <button type="button" class="secondary small-action" id="exportDataBtn">Exporter mes données</button>
+        <label class="secondary small-action import-label">Importer mes données
+          <input id="importDataInput" type="file" accept="application/json,.json" hidden />
+        </label>
+      </div>
+    </section>
+
+    <section class="toolbar" id="dexToolbar">
+      <div class="tabs" id="generationTabs"></div>
+      <label class="search-box">
+        <span>Recherche</span>
+        <input id="searchInput" type="search" placeholder="Nom ou numéro national…" />
+      </label>
+      <label class="filter-check">
+        <input id="onlyHunted" type="checkbox" />
+        Avec shasse uniquement
+      </label>
+      <label class="filter-check">
+        <input id="onlyMissing" type="checkbox" />
+        Shinys manquants
+      </label>
+    </section>
+
+    <section class="notice" id="notice">
+      Chargement du Pokédex… Les sprites locaux seront utilisés depuis <code>Icones/pokesprite-master/...</code>.
+    </section>
+
+    <section class="dex-grid" id="dexGrid" aria-live="polite"></section>
+  </main>
+
+  <dialog class="hunt-dialog" id="huntDialog">
+    <form method="dialog" class="hunt-form" id="huntForm">
+      <button type="button" class="close-btn" id="closeDialogBtn" aria-label="Fermer">×</button>
+      <div class="dialog-head">
+        <img id="dialogSprite" alt="" />
+        <div>
+          <p class="eyebrow" id="dialogNumber"></p>
+          <h2 id="dialogTitle"></h2>
+          <p id="dialogFamily" class="family-line"></p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label>Jeu
+          <select id="gameInput" required>
+            <option value="">Choisir…</option>
+            <option>Rouge</option>
+            <option>Bleu</option>
+            <option>Jaune</option>
+            <option>Or</option>
+            <option>Argent</option>
+            <option>Cristal</option>
+            <option>Rubis</option>
+            <option>Saphir</option>
+            <option>Émeraude</option>
+            <option>Rouge Feu</option>
+            <option>Vert Feuille</option>
+            <option>Diamant</option>
+            <option>Perle</option>
+            <option>Platine</option>
+            <option>HeartGold</option>
+            <option>SoulSilver</option>
+            <option>Noir</option>
+            <option>Blanc</option>
+            <option>Noir 2</option>
+            <option>Blanc 2</option>
+            <option>Autre</option>
+          </select>
+        </label>
+        <label>Méthode
+          <select id="methodInput" required>
+            <option value="">Choisir…</option>
+            <option>Rencontres aléatoires</option>
+            <option>Reset</option>
+            <option>Œufs / Masuda</option>
+            <option>Poké Radar</option>
+            <option>Pêche</option>
+            <option>Safari</option>
+            <option>Hordes / doubles rencontres</option>
+            <option>Événement</option>
+            <option>Autre</option>
+          </select>
+        </label>
+        <label>% de rencontres
+          <input id="encounterInput" type="number" min="0" max="100" step="0.01" placeholder="ex: 20" required />
+        </label>
+        <label>Rencontres faites
+          <input id="seenInput" type="number" min="0" step="1" placeholder="ex: 8192" />
+        </label>
+        <label>Nombre de phases
+          <input id="phaseInput" type="number" min="0" step="1" placeholder="ex: 2" />
+        </label>
+        <label>Lieu
+          <input id="locationInput" type="text" placeholder="ex: Route 201, Forêt de Jade…" />
+        </label>
+        <label>Statut
+          <select id="statusInput">
+            <option value="planned">Shasse prévue</option>
+            <option value="active">Shasse en cours</option>
+            <option value="done">Shiny obtenu</option>
+          </select>
+        </label>
+      </div>
+
+      <label>Notes / route / détails
+        <textarea id="notesInput" rows="3" placeholder="Route 201, repousse, troupeau, cible principale…"></textarea>
+      </label>
+
+      <div class="checks">
+        <label><input id="applyEvolutionInput" type="checkbox" /> Appliquer la même shasse aux évolutions aussi</label>
+        <label><input id="markShinyInput" type="checkbox" /> Marquer comme shiny obtenu</label>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" id="resetPokemonBtn" class="secondary">Réinitialiser ce Pokémon</button>
+        <button type="submit" class="primary">Enregistrer la shasse</button>
+      </div>
+
+      <section class="collection-list" id="collectionList"></section>
+      <section class="hunt-list" id="huntList"></section>
+    </form>
+  </dialog>
+
+  <script src="Shiny.js"></script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
