@@ -6,11 +6,11 @@
   <title>Pokédex Shiny & Shasses</title>
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-  <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="manifest.json?v=18" />
   <meta name="theme-color" content="#100f18" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ShinyDex" />
-  <link rel="stylesheet" href="Shiny.css" />
+  <link rel="stylesheet" href="Shiny.css?v=18" />
 </head>
 <body>
   <header class="hero">
@@ -144,7 +144,7 @@
 
       <div class="dialog-actions">
         <button type="button" id="resetPokemonBtn" class="secondary">Réinitialiser ce Pokémon</button>
-        <button type="submit" class="primary">Enregistrer la shasse</button>
+        <button type="submit" class="primary" id="submitDialogBtn">Enregistrer la shasse</button>
       </div>
 
       <section class="collection-list" id="collectionList"></section>
@@ -152,7 +152,7 @@
     </form>
   </dialog>
 
-  <script src="Shiny.js"></script>
+  <script src="Shiny.js?v=18"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {

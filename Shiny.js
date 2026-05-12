@@ -27,6 +27,86 @@ let pokemon = [];
 let currentGen = 1;
 let currentView = 'dex';
 let selectedPokemon = null;
+let dialogMode = 'hunt';
+let editingHunt = null;
+const shinyCardColorCache = {};
+
+// Couleurs stables inspirées des sprites shiny.
+// La Gen 1 est fixée à la main pour éviter les erreurs de navigateur/cache.
+// Les Gen 2 à 5 utilisent d'abord une détection depuis le sprite, puis un fallback varié.
+const SHINY_COLOR_MAP = {
+  1:'95, 225, 86', 2:'92, 205, 82', 3:'92, 180, 95',
+  4:'255, 192, 43', 5:'255, 203, 38', 6:'178, 64, 66',
+  7:'105, 210, 242', 8:'100, 192, 220', 9:'96, 170, 205',
+  10:'245, 205, 54', 11:'226, 100, 52', 12:'210, 176, 255',
+  13:'245, 196, 48', 14:'98, 98, 108', 15:'128, 134, 150',
+  16:'220, 186, 92', 17:'226, 198, 98', 18:'212, 178, 92',
+  19:'245, 190, 70', 20:'190, 130, 80', 21:'205, 160, 92', 22:'170, 125, 72',
+  23:'170, 115, 210', 24:'170, 115, 210', 25:'245, 168, 50', 26:'220, 145, 42',
+  27:'116, 210, 106', 28:'116, 185, 98', 29:'175, 112, 205', 30:'152, 98, 190', 31:'138, 90, 178',
+  32:'98, 170, 226', 33:'88, 150, 208', 34:'78, 130, 190',
+  35:'152, 238, 238', 36:'120, 212, 225', 37:'210, 178, 82', 38:'206, 160, 74',
+  39:'118, 224, 128', 40:'95, 205, 112', 41:'105, 220, 92', 42:'96, 200, 86',
+  43:'92, 210, 118', 44:'88, 190, 110', 45:'206, 150, 78',
+  46:'238, 176, 72', 47:'210, 160, 68', 48:'96, 170, 238', 49:'86, 150, 220',
+  50:'92, 185, 210', 51:'82, 160, 198', 52:'206, 112, 190', 53:'185, 98, 175',
+  54:'116, 205, 245', 55:'90, 178, 226', 56:'120, 210, 100', 57:'105, 190, 90',
+  58:'245, 204, 82', 59:'220, 180, 70', 60:'90, 205, 115', 61:'88, 188, 110', 62:'82, 170, 105',
+  63:'210, 190, 70', 64:'196, 175, 66', 65:'178, 160, 62',
+  66:'210, 190, 90', 67:'190, 170, 82', 68:'170, 150, 76',
+  69:'215, 196, 80', 70:'190, 176, 72', 71:'175, 160, 68',
+  72:'180, 116, 210', 73:'160, 100, 190', 74:'195, 160, 96', 75:'170, 140, 88', 76:'150, 125, 82',
+  77:'116, 210, 242', 78:'100, 190, 226', 79:'185, 135, 210', 80:'165, 118, 195',
+  81:'200, 170, 70', 82:'178, 150, 66', 83:'210, 178, 105', 84:'112, 210, 112', 85:'100, 190, 100',
+  86:'230, 206, 102', 87:'210, 185, 92', 88:'105, 200, 100', 89:'92, 180, 92',
+  90:'238, 186, 76', 91:'190, 145, 70', 92:'96, 200, 230', 93:'88, 180, 210', 94:'78, 160, 198',
+  95:'190, 176, 112', 96:'205, 160, 80', 97:'185, 145, 75', 98:'238, 190, 76', 99:'220, 170, 68',
+  100:'116, 210, 242', 101:'100, 190, 226', 102:'240, 210, 86', 103:'225, 188, 78',
+  104:'180, 145, 105', 105:'160, 125, 95', 106:'205, 172, 100', 107:'205, 172, 100',
+  108:'212, 166, 92', 109:'100, 200, 110', 110:'90, 180, 100', 111:'180, 150, 92', 112:'160, 132, 84',
+  113:'125, 210, 135', 114:'118, 205, 128', 115:'150, 120, 210', 116:'115, 205, 235', 117:'100, 180, 215',
+  118:'240, 205, 74', 119:'220, 185, 68', 120:'112, 205, 242', 121:'92, 180, 225',
+  122:'130, 195, 220', 123:'120, 210, 106', 124:'210, 116, 210', 125:'238, 178, 70', 126:'206, 116, 70',
+  127:'170, 120, 230', 128:'170, 120, 95', 129:'212, 170, 68', 130:'202, 72, 72',
+  131:'172, 116, 226', 132:'105, 205, 116', 133:'205, 185, 105', 134:'176, 116, 226',
+  135:'112, 210, 128', 136:'236, 178, 66', 137:'116, 205, 242', 138:'210, 170, 92', 139:'190, 150, 84',
+  140:'116, 205, 242', 141:'96, 180, 220', 142:'175, 120, 90', 143:'92, 195, 120',
+  144:'150, 116, 230', 145:'238, 190, 70', 146:'220, 108, 75', 147:'226, 150, 206', 148:'210, 130, 190', 149:'120, 210, 110',
+  150:'120, 210, 105', 151:'102, 210, 220'
+};
+
+const SHINY_COLOR_OVERRIDE_MAP = {
+  197:'88, 188, 235', 208:'205, 180, 95', 229:'160, 118, 210', 248:'145, 104, 210',
+  249:'236, 188, 82', 250:'210, 110, 78', 249:'236,188,82',
+  250:'210,110,78', 251:'110, 220, 150',
+  303:'236, 190, 82', 334:'245, 198, 88', 373:'92, 188, 112', 376:'222, 185, 80',
+  380:'238, 182, 82', 381:'102, 210, 112', 382:'205, 92, 92', 383:'205, 178, 82',
+  384:'236, 198, 86', 385:'255, 218, 110', 386:'206, 120, 88',
+  389:'152, 188, 96', 390:'238, 138, 188', 391:'232, 112, 168', 392:'224, 98, 156',
+  393:'112, 198, 242', 394:'98, 180, 225', 395:'86, 164, 212',
+  448:'230, 198, 82', 460:'225, 218, 110', 475:'110, 220, 180',
+  483:'232, 178, 110', 484:'205, 112, 188', 487:'188, 206, 92', 491:'188, 92, 205',
+  494:'255, 188, 82', 495:'120, 228, 120', 496:'104, 212, 108', 497:'88, 196, 96',
+  498:'242, 188, 82', 499:'224, 160, 74', 500:'210, 138, 68',
+  501:'112, 205, 242', 502:'96, 186, 224', 503:'82, 166, 208',
+  609:'170, 132, 240', 612:'225, 98, 110', 635:'110, 205, 110', 644:'235, 212, 96', 645:'186, 122, 92', 646:'112, 218, 226',
+  647:'102, 208, 196', 648:'238, 132, 196', 649:'188, 208, 96'
+};
+
+const SHINY_PROCEDURAL_PALETTE = [
+  [114, 225, 118], [245, 202, 74], [118, 205, 242], [238, 150, 196], [236, 128, 78],
+  [176, 146, 235], [102, 210, 165], [210, 182, 98], [226, 112, 156], [110, 198, 92],
+  [132, 190, 236], [236, 170, 108], [204, 130, 224], [152, 225, 112], [242, 214, 104],
+  [106, 214, 214], [220, 126, 106], [188, 170, 235], [116, 220, 142], [230, 188, 122]
+];
+
+const SHINY_FALLBACK_COLORS = [
+  '103, 232, 165', '255, 203, 5', '120, 217, 255', '253, 201, 239',
+  '255, 135, 48', '160, 132, 246', '245, 110, 130', '166, 208, 93',
+  '208, 208, 216', '238, 164, 106'
+];
+
+
 let state = loadState();
 
 const $ = (id) => document.getElementById(id);
@@ -146,6 +226,7 @@ function render() {
 
 function bindCardButtons() {
   $('dexGrid').querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => openDialog(Number(btn.dataset.open))));
+  $('dexGrid').querySelectorAll('[data-open-hunt]').forEach(btn => btn.addEventListener('click', () => openDialog(Number(btn.dataset.openHunt), false, { huntIndex: Number(btn.dataset.huntIndex), huntKey: btn.dataset.huntKey || '' })));
   $('dexGrid').querySelectorAll('[data-toggle]').forEach(btn => btn.addEventListener('click', () => openDialog(Number(btn.dataset.toggle), true)));
   $('dexGrid').querySelectorAll('[data-delete-hunt]').forEach(btn => btn.addEventListener('click', () => deleteHunt(Number(btn.dataset.deleteHunt), Number(btn.dataset.huntIndex), btn.dataset.huntKey)));
   $('dexGrid').querySelectorAll('[data-delete-shiny]').forEach(btn => btn.addEventListener('click', () => deleteShiny(Number(btn.dataset.deleteShiny), Number(btn.dataset.shinyIndex))));
@@ -164,6 +245,7 @@ function renderCollectionView() {
       <p>Va dans le Pokédex, clique sur <b>J’ai le shiny</b>, puis renseigne le jeu, le lieu, les rencontres et les phases.</p>
     </section>`;
   bindCardButtons();
+  applyShinyCardThemes();
 }
 
 function renderGamesView() {
@@ -181,10 +263,14 @@ function renderGamesView() {
 
 function collectHuntsByGame() {
   const grouped = {};
+  const seenByGame = new Set();
   pokemon.forEach(mon => {
     getEntry(mon.id).hunts.forEach((hunt, index) => {
       const names = expandGameNames(hunt.game || 'Jeu non indiqué');
       names.forEach(game => {
+        const dedupeKey = [game, hunt.createdAt || '', hunt.game || '', hunt.method || '', hunt.encounter || '', hunt.location || '', hunt.notes || ''].join('||');
+        if (seenByGame.has(dedupeKey)) return;
+        seenByGame.add(dedupeKey);
         if (!grouped[game]) grouped[game] = [];
         grouped[game].push({ mon, hunt, index, game });
       });
@@ -296,10 +382,16 @@ function gameTitleHTML(game) {
   return `<span class="pkm-prefix">Pokémon</span> ${gameNameHTML(game)}`;
 }
 
+
+function shinyThemeStyle(mon) {
+  const rgb = shinyThemeColor(Number(mon.id), mon.name || '');
+  return rgb ? `style="--shiny-rgb: ${rgb};"` : '';
+}
+
 function collectionCardHTML(mon, shiny, index) {
-  return `<article class="pokemon-card collection-card">
+  return `<article class="pokemon-card collection-card shiny-owned" data-shiny-theme="1" data-mon-id="${mon.id}" data-mon-name="${mon.name}" ${shinyThemeStyle(mon)}>
     <div class="dex-number">${dexNo(mon.id)} · shiny #${index + 1}</div>
-    <div class="sprite-wrap"><img src="${spriteSrc(mon, true)}" alt="${displayName(mon.name)} shiny" onerror="this.onerror=null;this.src='${fallbackSprite(mon, true)}'"></div>
+    <div class="sprite-wrap"><img crossorigin="anonymous" src="${spriteSrc(mon, true)}" alt="${displayName(mon.name)} shiny" onerror="this.onerror=null;this.src='${fallbackSprite(mon, true)}'"></div>
     <h3>${displayName(mon.name)}</h3>
     <div class="mini-details">
       <p><b>Jeu :</b> ${gameNameHTML(shiny.game || 'Non indiqué')}</p>
@@ -339,7 +431,7 @@ function gameHuntRowHTML(mon, hunt, index, visibleGame = '') {
       ${hunt.notes ? `<p>${escapeHTML(hunt.notes)}</p>` : ''}
     </div>
     <div class="row-actions">
-      <button data-open="${mon.id}">Ouvrir</button>
+      <button data-open-hunt="${mon.id}" data-hunt-index="${index}" data-hunt-key="${key}">Ouvrir</button>
       <button class="danger-btn" data-delete-hunt="${mon.id}" data-hunt-index="${index}" data-hunt-key="${key}">Supprimer</button>
     </div>
   </article>`;
@@ -348,9 +440,9 @@ function gameHuntRowHTML(mon, hunt, index, visibleGame = '') {
 function cardHTML(mon) {
   const entry = getEntry(mon.id);
   const src = entry.shiny ? spriteSrc(mon, true) : spriteSrc(mon, false);
-  return `<article class="pokemon-card">
+  return `<article class="pokemon-card ${entry.shiny ? 'shiny-owned' : ''}" ${entry.shiny ? `data-shiny-theme="1" data-mon-id="${mon.id}" data-mon-name="${mon.name}" ${shinyThemeStyle(mon)}` : ''}>
     <div class="dex-number">${dexNo(mon.id)}</div>
-    <div class="sprite-wrap"><img class="${entry.shiny ? '' : 'missing'}" src="${src}" alt="${displayName(mon.name)}" onerror="this.onerror=null;this.src='${fallbackSprite(mon, entry.shiny)}'"></div>
+    <div class="sprite-wrap"><img crossorigin="anonymous" class="${entry.shiny ? '' : 'missing'}" src="${src}" alt="${displayName(mon.name)}" onerror="this.onerror=null;this.src='${fallbackSprite(mon, entry.shiny)}'"></div>
     <h3>${displayName(mon.name)}</h3>
     <div class="badges">
       <span class="badge ${entry.shiny ? 'shiny' : ''}">${entry.shiny ? 'Shiny obtenu' : 'À obtenir'}</span>
@@ -364,10 +456,61 @@ function cardHTML(mon) {
   </article>`;
 }
 
+function setCardTheme(card, rgb) {
+  if (!card || !rgb) return;
+  card.style.setProperty('--shiny-rgb', rgb);
+}
+
+function applyShinyCardThemes() {
+  document.querySelectorAll('.pokemon-card.shiny-owned[data-shiny-theme="1"]').forEach(card => {
+    const monId = Number(card.dataset.monId || 0);
+    const monName = card.dataset.monName || '';
+    const rgb = shinyThemeColor(monId, monName) || shinyFallbackColor(monId, monName);
+    setCardTheme(card, rgb);
+  });
+}
+
+function shinyThemeColor(id, name = '') {
+  if (SHINY_COLOR_MAP[id]) return SHINY_COLOR_MAP[id];
+  if (SHINY_COLOR_OVERRIDE_MAP[id]) return SHINY_COLOR_OVERRIDE_MAP[id];
+  return proceduralShinyColor(id, name);
+}
+
+function shinyFallbackColor(id, name = '') {
+  return proceduralShinyColor(id, name) || SHINY_FALLBACK_COLORS[id % SHINY_FALLBACK_COLORS.length];
+}
+
+function proceduralShinyColor(id, name = '') {
+  const paletteIndex = Math.abs(Math.floor((id - 1) / 3) + hashName(name)) % SHINY_PROCEDURAL_PALETTE.length;
+  const variant = (id - 1) % 3;
+  let [r, g, b] = SHINY_PROCEDURAL_PALETTE[paletteIndex];
+
+  // petites variations par évolution pour garder une famille cohérente
+  const tweak = variant === 0 ? 1.06 : variant === 1 ? 0.98 : 0.9;
+  r = Math.max(52, Math.min(255, Math.round(r * tweak)));
+  g = Math.max(52, Math.min(255, Math.round(g * tweak)));
+  b = Math.max(52, Math.min(255, Math.round(b * tweak)));
+
+  return `${r}, ${g}, ${b}`;
+}
+
+function hashName(name = '') {
+  let h = 0;
+  for (let i = 0; i < name.length; i += 1) h = ((h * 31) + name.charCodeAt(i)) % 9973;
+  return h;
+}
+
+function extractDominantColor() {
+  return null;
+}
+
 function closeHuntDialog() {
   $('huntDialog').close();
   $('huntForm').reset();
   selectedPokemon = null;
+  dialogMode = 'hunt';
+  editingHunt = null;
+  setDialogMode('hunt');
 }
 
 function renderStats() {
@@ -381,17 +524,83 @@ function renderStats() {
     <div class="stat-card"><strong>${hunts}</strong><span>shasses notées</span></div>`;
 }
 
-function openDialog(id, shinyMode = false) {
+function setDialogMode(mode, isEditing = false) {
+  dialogMode = mode;
+  const submit = $('submitDialogBtn');
+  const markLabel = $('markShinyInput')?.closest('label');
+  const status = $('statusInput');
+
+  if (mode === 'shiny') {
+    if (submit) submit.textContent = 'Ajouter le shiny';
+    if (markLabel) markLabel.style.display = 'none';
+    if (status) status.value = 'done';
+    $('dialogFamily').textContent = 'Mode collection : ce bouton ajoute uniquement un shiny, sans créer de shasse.';
+  } else if (isEditing) {
+    if (submit) submit.textContent = 'Mettre à jour la shasse';
+    if (markLabel) markLabel.style.display = '';
+    $('dialogFamily').textContent = 'Modification : les infos de la shasse sélectionnée sont préremplies.';
+  } else {
+    if (submit) submit.textContent = 'Enregistrer la shasse';
+    if (markLabel) markLabel.style.display = '';
+    $('dialogFamily').textContent = 'Astuce : “évolutions” ne duplique plus les shasses. Si le shiny est obtenu, la famille sera marquée shiny.';
+  }
+  ['gameInput', 'methodInput', 'statusInput'].forEach(id => refreshSelectTheme($(id)));
+}
+
+function fillFormFromHunt(hunt = {}) {
+  $('gameInput').value = hunt.game || '';
+  $('methodInput').value = hunt.method || '';
+  $('encounterInput').value = hunt.encounter || '';
+  $('seenInput').value = hunt.seen || '';
+  $('phaseInput').value = hunt.phases || '';
+  $('locationInput').value = hunt.location || '';
+  $('statusInput').value = hunt.status || 'planned';
+  $('notesInput').value = hunt.notes || '';
+  $('applyEvolutionInput').checked = Boolean(hunt.applyToEvolutions);
+  $('markShinyInput').checked = hunt.status === 'done';
+  ['gameInput', 'methodInput', 'statusInput'].forEach(id => refreshSelectTheme($(id)));
+}
+
+function findHuntIndex(entry, index, key = '') {
+  let targetIndex = Number.isInteger(index) ? index : -1;
+  if (key) {
+    const decoded = String(key);
+    const found = entry.hunts.findIndex((h, i) => huntKey(h, i) === decoded);
+    if (found >= 0) targetIndex = found;
+  }
+  return targetIndex;
+}
+
+function openDialog(id, shinyMode = false, options = {}) {
   selectedPokemon = pokemon.find(p => p.id === id);
   const entry = getEntry(id);
+  $('huntForm').reset();
+  editingHunt = null;
+
   $('dialogTitle').textContent = displayName(selectedPokemon.name);
   $('dialogNumber').textContent = dexNo(id);
   $('dialogSprite').src = entry.shiny ? spriteSrc(selectedPokemon, true) : spriteSrc(selectedPokemon, false);
   $('dialogSprite').onerror = () => { $('dialogSprite').onerror = null; $('dialogSprite').src = fallbackSprite(selectedPokemon, entry.shiny); };
-  $('dialogFamily').textContent = 'Astuce : coche “évolutions” pour copier cette shasse à toute la famille via PokéAPI.';
-  $('markShinyInput').checked = shinyMode || entry.shiny;
-  $('statusInput').value = shinyMode ? 'done' : 'planned';
-  ['gameInput', 'methodInput', 'statusInput'].forEach(id => refreshSelectTheme($(id)));
+
+  if (options && Number.isInteger(options.huntIndex)) {
+    const targetIndex = findHuntIndex(entry, options.huntIndex, options.huntKey || '');
+    if (entry.hunts[targetIndex]) {
+      editingHunt = { id, index: targetIndex, key: options.huntKey || '', createdAt: entry.hunts[targetIndex].createdAt || '' };
+      fillFormFromHunt(entry.hunts[targetIndex]);
+      setDialogMode('hunt', true);
+    } else {
+      setDialogMode('hunt', false);
+    }
+  } else if (shinyMode) {
+    $('statusInput').value = 'done';
+    $('markShinyInput').checked = true;
+    setDialogMode('shiny');
+  } else {
+    $('statusInput').value = 'planned';
+    $('markShinyInput').checked = false;
+    setDialogMode('hunt');
+  }
+
   renderCollectionList(id);
   renderHuntList(id);
   $('huntDialog').showModal();
@@ -433,6 +642,8 @@ function escapeHTML(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;',
 async function saveHuntFromDialog(e) {
   e.preventDefault();
   if (!selectedPokemon) return;
+
+  const existingCreatedAt = editingHunt?.createdAt || '';
   const hunt = {
     game: $('gameInput').value,
     method: $('methodInput').value,
@@ -442,9 +653,11 @@ async function saveHuntFromDialog(e) {
     location: $('locationInput').value.trim(),
     status: $('statusInput').value,
     notes: $('notesInput').value.trim(),
-    createdAt: new Date().toISOString(),
+    applyToEvolutions: $('applyEvolutionInput').checked,
+    createdAt: existingCreatedAt || new Date().toISOString(),
   };
-  const isShinyObtained = $('markShinyInput').checked || hunt.status === 'done';
+
+  const isShinyObtained = dialogMode === 'shiny' || $('markShinyInput').checked || hunt.status === 'done';
   const shinyRecord = {
     game: hunt.game,
     method: hunt.method,
@@ -453,24 +666,64 @@ async function saveHuntFromDialog(e) {
     phases: hunt.phases,
     location: hunt.location,
     notes: hunt.notes,
-    createdAt: hunt.createdAt,
+    createdAt: new Date().toISOString(),
+    sourceHuntCreatedAt: hunt.createdAt,
   };
-  const ids = $('applyEvolutionInput').checked ? await getEvolutionFamilyIds(selectedPokemon.id) : [selectedPokemon.id];
-  ids.forEach(id => {
-    const entry = getEntry(id);
-    const nextShinies = isShinyObtained ? [...entry.shinies, shinyRecord] : entry.shinies;
-    setEntry(id, {
-      shiny: isShinyObtained || entry.shiny,
-      hunts: [...entry.hunts, hunt],
-      shinies: nextShinies,
-    });
-  });
+
+  const shouldApplyToEvolutions = $('applyEvolutionInput').checked || Boolean(hunt.applyToEvolutions);
+  const shinyIds = shouldApplyToEvolutions ? await getEvolutionFamilyIds(selectedPokemon.id) : [selectedPokemon.id];
+
+  if (isShinyObtained) {
+    // Un shiny obtenu ne crée pas de nouvelle shasse.
+    // Si on modifiait une shasse existante, elle est retirée car elle est terminée.
+    shinyIds.forEach(id => addShinyRecord(id, shinyRecord));
+    if (editingHunt) removeMatchingHunt(editingHunt.id, editingHunt.index, editingHunt.key, editingHunt.createdAt);
+  } else if (editingHunt) {
+    const entry = getEntry(editingHunt.id);
+    const targetIndex = findHuntIndex(entry, editingHunt.index, editingHunt.key || '');
+    if (entry.hunts[targetIndex]) {
+      const hunts = entry.hunts.map((oldHunt, i) => i === targetIndex ? hunt : oldHunt);
+      setEntry(editingHunt.id, { hunts });
+    }
+  } else {
+    // Une shasse reste unique : la case évolutions ne duplique plus la shasse dans toute la famille.
+    const entry = getEntry(selectedPokemon.id);
+    setEntry(selectedPokemon.id, { hunts: [...entry.hunts, hunt] });
+  }
+
+  const keepId = selectedPokemon.id;
   e.target.reset();
-  ['gameInput', 'methodInput', 'statusInput'].forEach(id => refreshSelectTheme($(id)));
-  $('markShinyInput').checked = getEntry(selectedPokemon.id).shiny;
-  renderCollectionList(selectedPokemon.id);
-  renderHuntList(selectedPokemon.id);
+  editingHunt = null;
+  setDialogMode('hunt');
+  renderCollectionList(keepId);
+  renderHuntList(keepId);
   render();
+}
+
+function addShinyRecord(id, shinyRecord) {
+  const entry = getEntry(id);
+  setEntry(id, {
+    shiny: true,
+    shinies: [...entry.shinies, shinyRecord],
+  });
+}
+
+function removeMatchingHunt(id, index, key = '', createdAt = '') {
+  const entry = getEntry(id);
+  const targetIndex = findHuntIndex(entry, index, key || '');
+  if (entry.hunts[targetIndex]) {
+    const target = entry.hunts[targetIndex];
+    const created = createdAt || target.createdAt || '';
+    if (created) {
+      Object.keys(state).forEach(entryId => {
+        const current = getEntry(entryId);
+        const hunts = current.hunts.filter(h => h.createdAt !== created);
+        if (hunts.length !== current.hunts.length) setEntry(entryId, { hunts });
+      });
+      return;
+    }
+    setEntry(id, { hunts: entry.hunts.filter((_, i) => i !== targetIndex) });
+  }
 }
 
 function toggleShiny(id) {
@@ -500,8 +753,16 @@ function deleteHunt(id, index, key = '') {
   const name = pokemon.find(p => p.id === id)?.name || `Pokémon ${id}`;
   const ok = confirm(`Supprimer cette shasse de ${displayName(name)} ?\n${hunt.game || 'Jeu non indiqué'} · ${hunt.method || 'Méthode non indiquée'}`);
   if (!ok) return;
-  const hunts = entry.hunts.filter((_, i) => i !== targetIndex);
-  setEntry(id, { hunts });
+  if (hunt.createdAt) {
+    Object.keys(state).forEach(entryId => {
+      const current = getEntry(entryId);
+      const hunts = current.hunts.filter(h => h.createdAt !== hunt.createdAt);
+      if (hunts.length !== current.hunts.length) setEntry(entryId, { hunts });
+    });
+  } else {
+    const hunts = entry.hunts.filter((_, i) => i !== targetIndex);
+    setEntry(id, { hunts });
+  }
   if (selectedPokemon && selectedPokemon.id === id) renderHuntList(id);
   render();
 }
@@ -522,7 +783,7 @@ function deleteShiny(id, index) {
 function exportData() {
   const payload = {
     app: 'Site Shiny',
-    version: 10,
+    version: 18,
     exportedAt: new Date().toISOString(),
     storageKey: STORAGE_KEY,
     data: state,
